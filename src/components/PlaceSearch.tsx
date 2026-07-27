@@ -29,7 +29,7 @@ export default function PlaceSearch({ onPick }: Props) {
     setActive(0);
     setFailed(false);
 
-    if (query.trim().length < 3) {
+    if (query.trim().length < 2) {
       setLoading(false);
       return;
     }
@@ -48,7 +48,7 @@ export default function PlaceSearch({ onPick }: Props) {
       } finally {
         setLoading(false);
       }
-    }, 450);
+    }, 260);
 
     return () => {
       controller.abort();
@@ -90,7 +90,7 @@ export default function PlaceSearch({ onPick }: Props) {
     }
   };
 
-  const showList = open && (results.length > 0 || loading || failed || query.trim().length >= 3);
+  const showList = open && (results.length > 0 || loading || failed || query.trim().length >= 2);
 
   return (
     <div className="psearch" ref={boxRef}>

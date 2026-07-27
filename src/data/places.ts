@@ -47,6 +47,17 @@ export const PLACES: Place[] = [
   { name: 'Qoubaiyat', arabic: 'القبيات', kind: 'town', lat: 34.5667, lng: 36.2833 },
   { name: 'Tannourine', arabic: 'تنورين', kind: 'town', lat: 34.2044, lng: 35.9139 },
 
+  { name: 'Naqoura', arabic: 'الناقورة', kind: 'town', lat: 33.1136, lng: 35.1394 },
+  { name: 'Chekka', arabic: 'شكا', kind: 'town', lat: 34.3003, lng: 35.7222 },
+  { name: 'Anfeh', arabic: 'انفه', kind: 'town', lat: 34.3494, lng: 35.7297 },
+  { name: 'Damour', arabic: 'الدامور', kind: 'town', lat: 33.7297, lng: 35.4553 },
+  { name: 'Jiyeh', arabic: 'الجية', kind: 'town', lat: 33.6597, lng: 35.4183 },
+  { name: 'Qana', arabic: 'قانا', kind: 'town', lat: 33.2078, lng: 35.3033 },
+  { name: 'Faraya', arabic: 'فاريا', kind: 'town', lat: 34.0006, lng: 35.8236 },
+  { name: 'Bhamdoun', arabic: 'بحمدون', kind: 'town', lat: 33.7972, lng: 35.6528 },
+  { name: 'Douma', arabic: 'دوما', kind: 'town', lat: 34.2103, lng: 35.8283 },
+  { name: 'Bkassine', arabic: 'بكاسين', kind: 'town', lat: 33.5325, lng: 35.5717 },
+
   // Sites worth a pin of their own
   { name: 'Cedars of God', kind: 'site', lat: 34.2447, lng: 36.0489 },
   { name: 'Qadisha Valley', kind: 'site', lat: 34.2472, lng: 35.9333 },

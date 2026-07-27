@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Pin, PinDraft } from '../types';
 import { repo, type RepoMode } from '../lib/repo';
+import { configIssue } from '../lib/supabase';
+import { describeError } from '../lib/errors';
 import { governorateAt } from '../lib/geo';
 
 export interface PinsApi {
   pins: Pin[];
   ready: boolean;
   mode: RepoMode;
+  /** Set when the shared map was configured but the settings don't work. */
+  setupWarning: string;
   error: string;
   clearError: () => void;
   save: (draft: PinDraft) => Promise<Pin | null>;
@@ -30,7 +34,7 @@ export function usePins(): PinsApi {
       setError('');
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Could not reach the shared map.');
+      setError(describeError(err, 'Could not reach the shared map.'));
     } finally {
       setReady(true);
     }
@@ -76,7 +80,7 @@ export function usePins(): PinsApi {
         return await commit(pin);
       } catch (err) {
         console.error(err);
-        setError(err instanceof Error ? err.message : 'That pin could not be saved.');
+        setError(describeError(err, 'That pin could not be saved.'));
         void reload();
         return null;
       }
@@ -93,7 +97,7 @@ export function usePins(): PinsApi {
         await repo.remove(pin);
       } catch (err) {
         console.error(err);
-        setError(err instanceof Error ? err.message : 'That pin could not be deleted.');
+        setError(describeError(err, 'That pin could not be deleted.'));
         void reload();
       }
     },
@@ -108,7 +112,7 @@ export function usePins(): PinsApi {
         await commit({ ...pin, ...changes, updatedAt: Date.now() });
       } catch (err) {
         console.error(err);
-        setError(err instanceof Error ? err.message : 'That change could not be saved.');
+        setError(describeError(err, 'That change could not be saved.'));
         void reload();
       }
     },
@@ -133,6 +137,7 @@ export function usePins(): PinsApi {
     pins,
     ready,
     mode: repo.mode,
+    setupWarning: configIssue(),
     error,
     clearError: () => setError(''),
     save,

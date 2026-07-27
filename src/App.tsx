@@ -14,7 +14,8 @@ const RAIL_WIDTH = 56;
 const DETAIL_WIDTH = 400;
 
 export default function App() {
-  const { pins, ready, mode, error, clearError, save, remove, move, toggleDone } = usePins();
+  const { pins, ready, mode, setupWarning, error, clearError, save, remove, move, toggleDone } =
+    usePins();
 
   const [entered, setEntered] = useState(false);
   // On a phone the log would cover the whole map, so it starts tucked away.
@@ -30,6 +31,7 @@ export default function App() {
   const [showPlaces, setShowPlaces] = useState(true);
   const [api, setApi] = useState<MapApi | null>(null);
   const [focusToken, setFocusToken] = useState(0);
+  const [warningShown, setWarningShown] = useState(true);
   const [narrow, setNarrow] = useState(() => window.innerWidth < 900);
 
   useEffect(() => {
@@ -245,6 +247,17 @@ export default function App() {
           <div className="toast toast--error" role="alert">
             <span>{error}</span>
             <button type="button" onClick={clearError} aria-label="Dismiss">
+              ×
+            </button>
+          </div>
+        )}
+
+        {!error && setupWarning && warningShown && (
+          <div className="toast toast--warn" role="alert">
+            <span>
+              <strong>Pins are only saving on this device.</strong> {setupWarning}
+            </span>
+            <button type="button" onClick={() => setWarningShown(false)} aria-label="Dismiss">
               ×
             </button>
           </div>

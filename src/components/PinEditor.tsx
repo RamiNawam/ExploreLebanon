@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Photo, PinDraft, PinKind } from '../types';
 import { imageFilesFrom } from '../lib/images';
+import { describeError } from '../lib/errors';
 import { repo } from '../lib/repo';
 import { governorateAt } from '../lib/geo';
 import { coords } from '../lib/format';
@@ -69,7 +70,7 @@ export default function PinEditor({ draft, onSave, onCancel }: Props) {
       }
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'That picture could not be added.');
+      setError(describeError(err, 'That picture could not be added.'));
     } finally {
       setBusy(0);
     }

@@ -25,7 +25,8 @@ export default function App() {
   const { pins, ready, error, clearError, save, remove, move, toggleDone } = usePins();
 
   const [entered, setEntered] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  // On a phone the log would cover the whole map, so it starts tucked away.
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 900);
   const [tab, setTab] = useState<PinKind>('adventure');
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -164,6 +165,9 @@ export default function App() {
 
   const offsetLeft = narrow ? 0 : collapsed ? RAIL_WIDTH : SIDEBAR_WIDTH;
   const offsetRight = narrow || !selected ? 0 : DETAIL_WIDTH;
+  const offsetTop = narrow ? 96 : 112;
+  // On a phone the open card is a bottom sheet, so pins need to fly higher up.
+  const offsetBottom = narrow && selected ? Math.round(window.innerHeight * 0.62) : 0;
 
   if (!entered) {
     return <Splash onExplore={() => setEntered(true)} />;
@@ -209,6 +213,8 @@ export default function App() {
           showPlaces={showPlaces}
           offsetLeft={offsetLeft}
           offsetRight={offsetRight}
+          offsetTop={offsetTop}
+          offsetBottom={offsetBottom}
           focusToken={focusToken}
           onReady={setApi}
         />

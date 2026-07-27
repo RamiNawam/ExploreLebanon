@@ -34,9 +34,11 @@ interface Props {
   basemap: BasemapId;
   showDistricts: boolean;
   showPlaces: boolean;
-  /** Horizontal px of chrome covering the map (sidebar left, detail card right). */
+  /** Px of chrome covering each edge of the map (side panels, toolbar, sheet). */
   offsetLeft: number;
   offsetRight: number;
+  offsetTop: number;
+  offsetBottom: number;
   focusToken: number;
   onReady: (api: MapApi) => void;
 }
@@ -120,6 +122,8 @@ export default function MapView(props: Props) {
     showPlaces,
     offsetLeft,
     offsetRight,
+    offsetTop,
+    offsetBottom,
     focusToken,
     onReady,
   } = props;
@@ -407,9 +411,11 @@ export default function MapView(props: Props) {
     if (!pin) return;
 
     const zoom = Math.max(map.getZoom(), 14);
-    // Nudge the target so the pin lands in the visible slice of the map.
-    const shift = (offsetLeft - offsetRight) / 2;
-    const point = map.project([pin.lat, pin.lng], zoom).subtract([shift, 40]);
+    // Nudge the target so the pin lands in the middle of the *visible* slice,
+    // not behind the side panel, the toolbar or the phone bottom sheet.
+    const point = map
+      .project([pin.lat, pin.lng], zoom)
+      .subtract([(offsetLeft - offsetRight) / 2, (offsetTop - offsetBottom) / 2]);
     map.flyTo(map.unproject(point, zoom), zoom, { duration: 1.15, easeLinearity: 0.22 });
     // Only re-run when the selection (or an explicit focus request) changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps

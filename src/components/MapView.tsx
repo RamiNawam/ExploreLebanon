@@ -6,8 +6,8 @@ import {
   GOVERNORATES,
   LEBANON,
   LEBANON_BOUNDS,
+  REGION_BOUNDS,
   latLngRings,
-  worldMinusLebanon,
   areaBounds,
   areaCentre,
 } from '../lib/geo';
@@ -27,6 +27,8 @@ interface Props {
   onSelect: (id: string | null) => void;
   placing: PinKind | null;
   onPlace: (lat: number, lng: number) => void;
+  /** Long-press / right-click anywhere on the map drops a pin there. */
+  onLongPress: (lat: number, lng: number) => void;
   movingId: string | null;
   onMoveTo: (lat: number, lng: number) => void;
   governorate: string;
@@ -62,6 +64,10 @@ const TILES: Record<BasemapId, { url: string; attribution: string; maxZoom: numb
 };
 
 const LABELS_OVERLAY = 'https://basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png';
+
+/** How long a press has to last before it counts as "drop a pin here". */
+const HOLD_MS = 550;
+const HOLD_SLOP = 12;
 
 function pinIcon(pin: Pin, selected: boolean): L.DivIcon {
   const glyph =
@@ -113,6 +119,7 @@ export default function MapView(props: Props) {
     onSelect,
     placing,
     onPlace,
+    onLongPress,
     movingId,
     onMoveTo,
     governorate,
@@ -133,68 +140,85 @@ export default function MapView(props: Props) {
   const baseRef = useRef<L.TileLayer | null>(null);
   const labelsRef = useRef<L.TileLayer | null>(null);
   const govLayerRef = useRef<Map<string, L.Polygon>>(new Map());
-  const govLabelsRef = useRef<L.LayerGroup | null>(null);
   const districtRef = useRef<L.LayerGroup | null>(null);
   const placesRef = useRef<L.LayerGroup | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const pinLayerRef = useRef<L.LayerGroup | null>(null);
 
-  // Latest values for the map's own event handlers, which are bound only once.
-  const handlers = useRef({ placing, onPlace, movingId, onMoveTo, onSelect });
-  handlers.current = { placing, onPlace, movingId, onMoveTo, onSelect };
+  // Latest values for the map's own handlers, which are bound only once.
+  const handlers = useRef({ placing, onPlace, movingId, onMoveTo, onSelect, onLongPress });
+  handlers.current = { placing, onPlace, movingId, onMoveTo, onSelect, onLongPress };
 
   /* ---------------------------------------------------------------- set-up */
   useEffect(() => {
     if (!hostRef.current || mapRef.current) return;
 
+    // Canvas beats SVG by a wide margin here: the boundaries are thousands of
+    // points and SVG re-lays-out every one of them on each zoom step.
+    const renderer = L.canvas({ padding: 0.5 });
+
     const map = L.map(hostRef.current, {
+      renderer,
+      preferCanvas: true,
       zoomControl: false,
       attributionControl: true,
       minZoom: 7.5,
       maxZoom: 18,
-      zoomSnap: 0.25,
-      wheelPxPerZoomLevel: 120,
-      maxBounds: L.latLngBounds(LEBANON_BOUNDS).pad(0.25),
-      maxBoundsViscosity: 1,
+      zoomSnap: 0,
+      zoomDelta: 0.5,
+      wheelPxPerZoomLevel: 110,
+      zoomAnimation: true,
+      maxBounds: L.latLngBounds(REGION_BOUNDS),
+      maxBoundsViscosity: 0.9,
+      tapHold: true, // long-press on touch fires `contextmenu`
     });
     mapRef.current = map;
     map.fitBounds(LEBANON_BOUNDS, { padding: [40, 40] });
-
-    // Everything outside the border is painted out, so only Lebanon shows.
-    L.polygon(worldMinusLebanon(), {
-      className: 'world-mask',
-      stroke: false,
-      fillColor: '#0b1710',
-      fillOpacity: 1,
-      interactive: false,
-    }).addTo(map);
 
     // Governorate shapes, dimmed or highlighted by the active filter.
     const govLayer = L.layerGroup().addTo(map);
     GOVERNORATES.forEach((area) => {
       const poly = L.polygon(latLngRings(area), {
+        renderer,
         interactive: false,
         color: '#2f5d43',
         weight: 1,
-        opacity: 0.55,
+        opacity: 0.5,
         fillColor: '#3d7a56',
-        fillOpacity: 0.05,
+        fillOpacity: 0.04,
       }).addTo(govLayer);
       govLayerRef.current.set(area.name, poly);
     });
 
-    // The gilded country outline sits above the fills.
-    L.polyline(latLngRings(LEBANON), {
-      color: '#c9a24b',
-      weight: 2.5,
-      opacity: 0.95,
+    // Lebanon itself: a warm wash to lift it off its neighbours, then a dark
+    // casing line under a gold border so the frontier reads unmistakably.
+    const rings = latLngRings(LEBANON);
+    L.polygon(rings, {
+      renderer,
       interactive: false,
-      className: 'country-outline',
+      stroke: false,
+      fillColor: '#f0d9a0',
+      fillOpacity: 0.1,
+    }).addTo(map);
+    L.polyline(rings, {
+      renderer,
+      interactive: false,
+      color: '#14261c',
+      weight: 6,
+      opacity: 0.35,
+      lineJoin: 'round',
+    }).addTo(map);
+    L.polyline(rings, {
+      renderer,
+      interactive: false,
+      color: '#c9a24b',
+      weight: 2.6,
+      opacity: 1,
+      lineJoin: 'round',
     }).addTo(map);
 
     // Clickable governorate names, doubling as the map-side filter control.
     const govLabels = L.layerGroup().addTo(map);
-    govLabelsRef.current = govLabels;
     GOVERNORATES.forEach((area) => {
       L.marker(areaCentre(area), {
         icon: L.divIcon({
@@ -215,10 +239,11 @@ export default function MapView(props: Props) {
     districtRef.current = districts;
     DISTRICTS.forEach((area) => {
       L.polygon(latLngRings(area), {
+        renderer,
         interactive: false,
         color: '#8a7a55',
         weight: 0.9,
-        opacity: 0.7,
+        opacity: 0.75,
         dashArray: '3 4',
         fill: false,
       }).addTo(districts);
@@ -253,13 +278,72 @@ export default function MapView(props: Props) {
 
     pinLayerRef.current = L.layerGroup().addTo(map);
 
+    /* ---------------------------------------------------- clicks and holds */
+
+    // A hold that has already dropped a pin must not also count as a click.
+    let swallowNextClick = false;
+
     map.on('click', (event: L.LeafletMouseEvent) => {
+      if (swallowNextClick) {
+        swallowNextClick = false;
+        return;
+      }
       const { lat, lng } = event.latlng;
       const state = handlers.current;
       if (state.movingId) state.onMoveTo(lat, lng);
       else if (state.placing) state.onPlace(lat, lng);
       else state.onSelect(null);
     });
+
+    const holdAt = (latlng: L.LatLng) => {
+      const state = handlers.current;
+      swallowNextClick = true;
+      if (state.movingId) state.onMoveTo(latlng.lat, latlng.lng);
+      else state.onLongPress(latlng.lat, latlng.lng);
+    };
+
+    // Touch long-press (via tapHold) and desktop right-click both land here.
+    map.on('contextmenu', (event: L.LeafletMouseEvent) => {
+      L.DomEvent.preventDefault(event.originalEvent);
+      holdAt(event.latlng);
+    });
+
+    // Holding the left button still on a laptop counts too.
+    let holdTimer: number | undefined;
+    let holdOrigin: { x: number; y: number } | null = null;
+
+    const cancelHold = () => {
+      if (holdTimer !== undefined) window.clearTimeout(holdTimer);
+      holdTimer = undefined;
+      holdOrigin = null;
+      hostRef.current?.classList.remove('is-holding');
+    };
+
+    map.on('mousedown', (event: L.LeafletMouseEvent) => {
+      const mouse = event.originalEvent;
+      // Touch is handled by tapHold; only watch real mouse buttons here.
+      const fromTouch = 'pointerType' in mouse && mouse.pointerType === 'touch';
+      if (mouse.button !== 0 || fromTouch) return;
+      const { latlng } = event;
+      holdOrigin = { x: mouse.clientX, y: mouse.clientY };
+      hostRef.current?.classList.add('is-holding');
+      holdTimer = window.setTimeout(() => {
+        cancelHold();
+        holdAt(latlng);
+      }, HOLD_MS);
+    });
+
+    map.on('mousemove', (event: L.LeafletMouseEvent) => {
+      if (!holdOrigin) return;
+      const { clientX, clientY } = event.originalEvent;
+      if (Math.abs(clientX - holdOrigin.x) + Math.abs(clientY - holdOrigin.y) > HOLD_SLOP) {
+        cancelHold();
+      }
+    });
+
+    map.on('mouseup mouseout dragstart zoomstart movestart', cancelHold);
+
+    /* ------------------------------------------------------------ chrome */
 
     const applyZoomBand = () => {
       const host = hostRef.current;
@@ -280,6 +364,7 @@ export default function MapView(props: Props) {
     });
 
     return () => {
+      cancelHold();
       observer.disconnect();
       map.remove();
       mapRef.current = null;
@@ -299,8 +384,9 @@ export default function MapView(props: Props) {
       attribution: spec.attribution,
       maxZoom: spec.maxZoom,
       maxNativeZoom: spec.maxZoom,
-      // Only fetch tiles that touch Lebanon — nothing around it is ever drawn.
-      bounds: L.latLngBounds(LEBANON_BOUNDS).pad(0.02),
+      // Fewer requests mid-gesture keeps zooming and panning fluid.
+      updateWhenZooming: false,
+      keepBuffer: 3,
       className: `tiles tiles--${basemap}`,
     }).addTo(map);
     baseRef.current.setZIndex(1);
@@ -311,7 +397,7 @@ export default function MapView(props: Props) {
       labelsRef.current = L.tileLayer(LABELS_OVERLAY, {
         opacity: 0.85,
         maxZoom: 18,
-        bounds: L.latLngBounds(LEBANON_BOUNDS).pad(0.02),
+        updateWhenZooming: false,
       }).addTo(map);
       labelsRef.current.setZIndex(2);
     }
@@ -338,13 +424,13 @@ export default function MapView(props: Props) {
     const map = mapRef.current;
     if (!map) return;
     govLayerRef.current.forEach((poly, name) => {
-      const isActive = !governorate || governorate === name;
+      const chosen = governorate === name;
       poly.setStyle({
-        color: governorate === name ? '#c9a24b' : '#2f5d43',
-        weight: governorate === name ? 2.2 : 1,
-        opacity: isActive ? 0.8 : 0.25,
-        fillColor: governorate === name ? '#c9a24b' : '#3d7a56',
-        fillOpacity: governorate === name ? 0.12 : isActive ? 0.05 : 0.02,
+        color: chosen ? '#c9a24b' : '#2f5d43',
+        weight: chosen ? 2.2 : 1,
+        opacity: !governorate || chosen ? 0.7 : 0.2,
+        fillColor: chosen ? '#c9a24b' : '#3d7a56',
+        fillOpacity: chosen ? 0.14 : 0.04,
       });
     });
     hostRef.current
@@ -356,8 +442,8 @@ export default function MapView(props: Props) {
       const area = GOVERNORATES.find((g) => g.name === governorate);
       if (area) {
         map.flyToBounds(areaBounds(area), {
-          paddingTopLeft: [offsetLeft + 40, 90],
-          paddingBottomRight: [offsetRight + 40, 60],
+          paddingTopLeft: [offsetLeft + 40, offsetTop],
+          paddingBottomRight: [offsetRight + 40, offsetBottom + 60],
           duration: 0.9,
         });
       }

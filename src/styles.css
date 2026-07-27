@@ -306,7 +306,11 @@ h3 {
 .map-host {
   position: absolute;
   inset: 0;
-  background: #0b1710;
+  background: #aecfd6;
+  /* A long press should drop a pin, not select text or raise iOS's callout. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .map-host.is-picking {
@@ -314,6 +318,11 @@ h3 {
 }
 .map-host.is-picking .leaflet-grab {
   cursor: crosshair;
+}
+
+/* Subtle feedback while a press is on its way to becoming a pin. */
+.map-host.is-holding .leaflet-grab {
+  cursor: progress;
 }
 
 /* ============================================================
@@ -559,6 +568,15 @@ h3 {
 .add-btn--todo:hover {
   border-color: var(--blue);
   color: #d4ecfa;
+}
+
+.tip {
+  margin: 7px 0 0;
+  text-align: center;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(248, 241, 227, 0.34);
 }
 
 /* Filters ---------------------------------------------------- */
@@ -942,12 +960,48 @@ h3 {
 .sidebar__foot {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 10px 2px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(248, 241, 227, 0.35);
+}
+
+.sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: help;
+}
+
+.sync i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.18);
+}
+
+.sync.is-live {
+  color: rgba(180, 226, 197, 0.8);
+}
+
+.sync.is-live i {
+  background: #57c98a;
+  box-shadow: 0 0 0 3px rgba(87, 201, 138, 0.2);
+  animation: sync-blink 3.2s ease-in-out infinite;
+}
+
+@keyframes sync-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 
 /* ============================================================
@@ -2175,13 +2229,8 @@ h3 {
    ============================================================ */
 
 .leaflet-container {
-  background: #0b1710;
+  background: #aecfd6;
   font-family: var(--sans);
-}
-
-/* The country reads as a lit shape floating on dark cedar. */
-.world-mask {
-  filter: drop-shadow(0 0 22px rgba(0, 0, 0, 0.85));
 }
 
 .leaflet-control-attribution {
@@ -2204,16 +2253,10 @@ h3 {
   border: 0 !important;
 }
 
-.country-outline {
-  filter: drop-shadow(0 0 6px rgba(201, 162, 75, 0.5));
-}
-
+/* Tile filters are cheap (the browser composites them once per tile) but
+   filters on the vector panes are not — the boundaries are plain canvas. */
 .tiles--map {
-  filter: saturate(0.86) contrast(1.02) brightness(1.02);
-}
-
-.tiles--terrain {
-  filter: saturate(0.94);
+  filter: saturate(0.88) contrast(1.02);
 }
 
 /* Governorate labels ----------------------------------------- */
@@ -2223,9 +2266,9 @@ h3 {
   left: 0;
   transform: translate(-50%, -50%);
   padding: 4px 10px;
-  border: 1px solid rgba(201, 162, 75, 0.45);
+  border: 1px solid rgba(201, 162, 75, 0.55);
   border-radius: 999px;
-  background: rgba(248, 241, 227, 0.82);
+  background: rgba(248, 241, 227, 0.9);
   color: #23402f;
   font-family: var(--serif);
   font-size: 13px;
@@ -2233,7 +2276,6 @@ h3 {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   white-space: nowrap;
-  backdrop-filter: blur(3px);
   box-shadow: var(--shadow-sm);
   transition:
     background 0.2s ease,
@@ -2252,11 +2294,18 @@ h3 {
   color: #21170a;
 }
 
-.zoom-mid .gov-label,
+/* Governorate pills are the map-side filter, so they stay until you are
+   zoomed in far enough for town names to take over. */
 .zoom-near .gov-label {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
+}
+
+.zoom-mid .gov-label {
+  font-size: 11px;
+  padding: 3px 8px;
+  opacity: 0.9;
 }
 
 /* District labels -------------------------------------------- */
@@ -2307,10 +2356,10 @@ h3 {
   font-size: 11.5px;
   font-weight: 600;
   color: #23301f;
+  /* Two shadow layers, not three: these repaint on every pan. */
   text-shadow:
     0 1px 0 rgba(255, 255, 255, 0.95),
-    0 0 4px rgba(255, 255, 255, 0.9),
-    0 0 8px rgba(255, 255, 255, 0.7);
+    0 0 5px rgba(255, 255, 255, 0.9);
 }
 
 .plabel--city .plabel__dot {

@@ -82,9 +82,62 @@ export function areaContains(area: Area, lat: number, lng: number): boolean {
   return false;
 }
 
-/** Which governorate a dropped pin lands in — '' if the point is outside Lebanon. */
+/**
+ * Which governorate a dropped pin belongs to. Beach and harbour pins often land
+ * a few metres offshore, past the coastline the boundaries are clipped to, so
+ * anything within a few km of a governorate is credited to it.
+ */
 export function governorateAt(lat: number, lng: number): string {
-  return GOVERNORATES.find((g) => areaContains(g, lat, lng))?.name ?? '';
+  const hit = GOVERNORATES.find((g) => areaContains(g, lat, lng));
+  if (hit) return hit.name;
+
+  const NEAR_DEG = 0.05; // ~5 km
+  let best = '';
+  let bestDist = NEAR_DEG;
+  for (const area of GOVERNORATES) {
+    const d = distanceToArea(area, lat, lng);
+    if (d < bestDist) {
+      bestDist = d;
+      best = area.name;
+    }
+  }
+  return best;
+}
+
+/** Rough degrees from a point to an area's edge; only used for short hops. */
+function distanceToArea(area: Area, lat: number, lng: number): number {
+  const kx = Math.cos((lat * Math.PI) / 180);
+  let best = Infinity;
+  for (const poly of polygonsOf(area.geometry)) {
+    const ring = poly[0];
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const d = pointToSegment(
+        lng * kx,
+        lat,
+        ring[j][0] * kx,
+        ring[j][1],
+        ring[i][0] * kx,
+        ring[i][1]
+      );
+      if (d < best) best = d;
+    }
+  }
+  return best;
+}
+
+function pointToSegment(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number
+): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
 export function inLebanon(lat: number, lng: number): boolean {
@@ -153,21 +206,14 @@ export function areaBounds(area: Area): [[number, number], [number, number]] {
   ];
 }
 
-/**
- * A world-covering ring with Lebanon punched out of it, so everything beyond
- * the border can be softly dimmed.
- */
-export function worldMinusLebanon(): [number, number][][] {
-  const world: [number, number][] = [
-    [-89, -179],
-    [89, -179],
-    [89, 179],
-    [-89, 179],
-  ];
-  const holes = polygonsOf(LEBANON.geometry).map((poly) =>
-    poly[0].map(([lng, lat]) => [lat, lng] as [number, number])
-  );
-  return [world, ...holes];
-}
-
 export const LEBANON_BOUNDS = areaBounds(LEBANON);
+
+/**
+ * How far the map may be panned: Lebanon plus a wide margin, so the coast,
+ * the sea and the neighbouring hills stay in view without letting you drift
+ * off to another continent.
+ */
+export const REGION_BOUNDS: [[number, number], [number, number]] = [
+  [LEBANON_BOUNDS[0][0] - 0.55, LEBANON_BOUNDS[0][1] - 0.85],
+  [LEBANON_BOUNDS[1][0] + 0.55, LEBANON_BOUNDS[1][1] + 0.85],
+];

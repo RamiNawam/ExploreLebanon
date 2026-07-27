@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import MapView, { type BasemapId, type MapApi } from './components/MapView';
-import Sidebar, { type Filters } from './components/Sidebar';
+import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import PinDetail from './components/PinDetail';
 import PinEditor from './components/PinEditor';
@@ -13,22 +13,14 @@ const SIDEBAR_WIDTH = 376;
 const RAIL_WIDTH = 56;
 const DETAIL_WIDTH = 400;
 
-const EMPTY_FILTERS: Filters = {
-  query: '',
-  governorate: '',
-  from: '',
-  to: '',
-  sort: 'newest',
-};
-
 export default function App() {
-  const { pins, ready, error, clearError, save, remove, move, toggleDone } = usePins();
+  const { pins, ready, mode, error, clearError, save, remove, move, toggleDone } = usePins();
 
   const [entered, setEntered] = useState(false);
   // On a phone the log would cover the whole map, so it starts tucked away.
   const [collapsed, setCollapsed] = useState(() => window.innerWidth < 900);
   const [tab, setTab] = useState<PinKind>('adventure');
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [governorate, setGovernorate] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<PinDraft | null>(null);
   const [placing, setPlacing] = useState<PinKind | null>(null);
@@ -59,28 +51,16 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [placing, movingId]);
 
-  const onMap = useMemo(() => {
-    const q = filters.query.trim().toLowerCase();
-    return pins.filter((pin) => {
-      if (filters.governorate && pin.governorate !== filters.governorate) return false;
-      if (q && !`${pin.name} ${pin.description} ${pin.governorate}`.toLowerCase().includes(q))
-        return false;
-      // Date bounds only make sense for dated adventures.
-      if (pin.kind === 'adventure') {
-        if (filters.from && (!pin.date || pin.date < filters.from)) return false;
-        if (filters.to && (!pin.date || pin.date > filters.to)) return false;
-      }
-      return true;
-    });
-  }, [pins, filters]);
+  const onMap = useMemo(
+    () => (governorate ? pins.filter((pin) => pin.governorate === governorate) : pins),
+    [pins, governorate]
+  );
 
-  const listed = useMemo(() => {
-    const rows = onMap.filter((pin) => pin.kind === tab);
-    const sorted = [...rows];
-    if (filters.sort === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name));
-    else if (filters.sort === 'oldest') sorted.reverse();
-    return sorted;
-  }, [onMap, tab, filters.sort]);
+  /** The log reads as a journal: earliest trip first. */
+  const listed = useMemo(
+    () => onMap.filter((pin) => pin.kind === tab).sort(oldestFirst),
+    [onMap, tab]
+  );
 
   const counts = useMemo(
     () => ({
@@ -103,6 +83,18 @@ export default function App() {
     [pins]
   );
 
+  const blankDraft = (kind: PinKind, lat: number, lng: number): PinDraft => ({
+    kind,
+    name: '',
+    description: '',
+    date: kind === 'adventure' ? today() : '',
+    lat,
+    lng,
+    cover: null,
+    photos: [],
+    done: false,
+  });
+
   const startNew = (kind: PinKind) => {
     setTab(kind);
     setMovingId(null);
@@ -112,18 +104,15 @@ export default function App() {
 
   const onPlace = (lat: number, lng: number) => {
     if (!placing) return;
-    setDraft({
-      kind: placing,
-      name: '',
-      description: '',
-      date: placing === 'adventure' ? today() : '',
-      lat,
-      lng,
-      cover: null,
-      photos: [],
-      done: false,
-    });
+    setDraft(blankDraft(placing, lat, lng));
     setPlacing(null);
+  };
+
+  /** Long-press or right-click: skip the two-step flow and open the form. */
+  const onLongPress = (lat: number, lng: number) => {
+    setPlacing(null);
+    setSelectedId(null);
+    setDraft(blankDraft(tab, lat, lng));
   };
 
   const onMoveTo = async (lat: number, lng: number) => {
@@ -183,8 +172,6 @@ export default function App() {
         onToggleCollapsed={() => setCollapsed((v) => !v)}
         tab={tab}
         onTab={setTab}
-        filters={filters}
-        onFilters={setFilters}
         pins={listed}
         counts={counts}
         selectedId={selectedId}
@@ -193,6 +180,7 @@ export default function App() {
         onEdit={onEdit}
         onDelete={onDelete}
         onToggleDone={(pin) => toggleDone(pin.id)}
+        shared={mode === 'cloud'}
       />
 
       <main className="stage">
@@ -202,12 +190,11 @@ export default function App() {
           onSelect={select}
           placing={placing}
           onPlace={onPlace}
+          onLongPress={onLongPress}
           movingId={movingId}
           onMoveTo={onMoveTo}
-          governorate={filters.governorate}
-          onGovernorate={(name) =>
-            setFilters((f) => ({ ...f, governorate: f.governorate === name ? '' : name }))
-          }
+          governorate={governorate}
+          onGovernorate={(name) => setGovernorate((prev) => (prev === name ? '' : name))}
           basemap={basemap}
           showDistricts={showDistricts}
           showPlaces={showPlaces}
@@ -220,8 +207,8 @@ export default function App() {
         />
 
         <Toolbar
-          governorate={filters.governorate}
-          onGovernorate={(name) => setFilters((f) => ({ ...f, governorate: name }))}
+          governorate={governorate}
+          onGovernorate={setGovernorate}
           basemap={basemap}
           onBasemap={setBasemap}
           showDistricts={showDistricts}
@@ -282,4 +269,11 @@ export default function App() {
       {draft && <PinEditor draft={draft} onSave={onSave} onCancel={() => setDraft(null)} />}
     </div>
   );
+}
+
+function oldestFirst(a: Pin, b: Pin): number {
+  if (a.date && b.date && a.date !== b.date) return a.date < b.date ? -1 : 1;
+  if (a.date && !b.date) return -1;
+  if (!a.date && b.date) return 1;
+  return a.createdAt - b.createdAt;
 }

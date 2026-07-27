@@ -8,7 +8,6 @@ import {
   LEBANON_BOUNDS,
   REGION_BOUNDS,
   latLngRings,
-  areaBounds,
   areaCentre,
 } from '../lib/geo';
 import { PLACES } from '../data/places';
@@ -19,6 +18,7 @@ export interface MapApi {
   zoomIn: () => void;
   zoomOut: () => void;
   reset: () => void;
+  flyToPoint: (lat: number, lng: number, zoom?: number) => void;
 }
 
 interface Props {
@@ -31,8 +31,6 @@ interface Props {
   onLongPress: (lat: number, lng: number) => void;
   movingId: string | null;
   onMoveTo: (lat: number, lng: number) => void;
-  governorate: string;
-  onGovernorate: (name: string) => void;
   basemap: BasemapId;
   showDistricts: boolean;
   showPlaces: boolean;
@@ -42,6 +40,8 @@ interface Props {
   offsetTop: number;
   offsetBottom: number;
   focusToken: number;
+  /** A place picked from search, marked until the search is cleared. */
+  found: { name: string; lat: number; lng: number } | null;
   onReady: (api: MapApi) => void;
 }
 
@@ -122,8 +122,6 @@ export default function MapView(props: Props) {
     onLongPress,
     movingId,
     onMoveTo,
-    governorate,
-    onGovernorate,
     basemap,
     showDistricts,
     showPlaces,
@@ -132,6 +130,7 @@ export default function MapView(props: Props) {
     offsetTop,
     offsetBottom,
     focusToken,
+    found,
     onReady,
   } = props;
 
@@ -139,15 +138,17 @@ export default function MapView(props: Props) {
   const mapRef = useRef<L.Map | null>(null);
   const baseRef = useRef<L.TileLayer | null>(null);
   const labelsRef = useRef<L.TileLayer | null>(null);
-  const govLayerRef = useRef<Map<string, L.Polygon>>(new Map());
   const districtRef = useRef<L.LayerGroup | null>(null);
   const placesRef = useRef<L.LayerGroup | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const pinLayerRef = useRef<L.LayerGroup | null>(null);
+  const foundRef = useRef<L.Marker | null>(null);
 
   // Latest values for the map's own handlers, which are bound only once.
   const handlers = useRef({ placing, onPlace, movingId, onMoveTo, onSelect, onLongPress });
   handlers.current = { placing, onPlace, movingId, onMoveTo, onSelect, onLongPress };
+  const offsets = useRef({ left: offsetLeft, right: offsetRight, top: offsetTop, bottom: offsetBottom });
+  offsets.current = { left: offsetLeft, right: offsetRight, top: offsetTop, bottom: offsetBottom };
 
   /* ---------------------------------------------------------------- set-up */
   useEffect(() => {
@@ -166,7 +167,10 @@ export default function MapView(props: Props) {
       maxZoom: 18,
       zoomSnap: 0,
       zoomDelta: 0.5,
-      wheelPxPerZoomLevel: 110,
+      // Leaflet's default is 60px of scroll per zoom level; less means the
+      // wheel and trackpad move the map sooner.
+      wheelPxPerZoomLevel: 45,
+      wheelDebounceTime: 20,
       zoomAnimation: true,
       maxBounds: L.latLngBounds(REGION_BOUNDS),
       maxBoundsViscosity: 0.9,
@@ -178,7 +182,7 @@ export default function MapView(props: Props) {
     // Governorate shapes, dimmed or highlighted by the active filter.
     const govLayer = L.layerGroup().addTo(map);
     GOVERNORATES.forEach((area) => {
-      const poly = L.polygon(latLngRings(area), {
+      L.polygon(latLngRings(area), {
         renderer,
         interactive: false,
         color: '#2f5d43',
@@ -187,7 +191,6 @@ export default function MapView(props: Props) {
         fillColor: '#3d7a56',
         fillOpacity: 0.04,
       }).addTo(govLayer);
-      govLayerRef.current.set(area.name, poly);
     });
 
     // Lebanon itself: a warm wash lifts it off its neighbours, and the frontier
@@ -209,23 +212,6 @@ export default function MapView(props: Props) {
       opacity: 0.85,
       lineJoin: 'round',
     }).addTo(map);
-
-    // Clickable governorate names, doubling as the map-side filter control.
-    const govLabels = L.layerGroup().addTo(map);
-    GOVERNORATES.forEach((area) => {
-      L.marker(areaCentre(area), {
-        icon: L.divIcon({
-          className: 'gov-label-wrap',
-          html: `<button type="button" class="gov-label" data-gov="${escapeHtml(area.name)}">${escapeHtml(area.name)}</button>`,
-          iconSize: [0, 0],
-          iconAnchor: [0, 0],
-        }),
-        interactive: true,
-        keyboard: false,
-      })
-        .on('click', () => onGovernorate(area.name))
-        .addTo(govLabels);
-    });
 
     // District (caza) boundaries — a finer grid, toggled from the toolbar.
     const districts = L.layerGroup();
@@ -354,6 +340,13 @@ export default function MapView(props: Props) {
       zoomIn: () => map.zoomIn(1),
       zoomOut: () => map.zoomOut(1),
       reset: () => map.flyToBounds(LEBANON_BOUNDS, { padding: [40, 40], duration: 1 }),
+      flyToPoint: (lat, lng, zoom = 13) => {
+        const o = offsets.current;
+        const point = map
+          .project([lat, lng], zoom)
+          .subtract([(o.left - o.right) / 2, (o.top - o.bottom) / 2]);
+        map.flyTo(map.unproject(point, zoom), zoom, { duration: 1.1 });
+      },
     });
 
     return () => {
@@ -362,7 +355,6 @@ export default function MapView(props: Props) {
       map.remove();
       mapRef.current = null;
       markersRef.current.clear();
-      govLayerRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -412,39 +404,6 @@ export default function MapView(props: Props) {
     else placesRef.current.remove();
   }, [showPlaces]);
 
-  /* -------------------------------------------------- governorate filter */
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    govLayerRef.current.forEach((poly, name) => {
-      const chosen = governorate === name;
-      poly.setStyle({
-        color: chosen ? '#c9a24b' : '#2f5d43',
-        weight: chosen ? 2.2 : 1,
-        opacity: !governorate || chosen ? 0.7 : 0.2,
-        fillColor: chosen ? '#c9a24b' : '#3d7a56',
-        fillOpacity: chosen ? 0.14 : 0.04,
-      });
-    });
-    hostRef.current
-      ?.querySelectorAll<HTMLElement>('.gov-label')
-      .forEach((el) =>
-        el.classList.toggle('is-active', el.dataset.gov === governorate && !!governorate)
-      );
-    if (governorate) {
-      const area = GOVERNORATES.find((g) => g.name === governorate);
-      if (area) {
-        map.flyToBounds(areaBounds(area), {
-          paddingTopLeft: [offsetLeft + 40, offsetTop],
-          paddingBottomRight: [offsetRight + 40, offsetBottom + 60],
-          duration: 0.9,
-        });
-      }
-    }
-    // Re-fitting on offset changes would fight the user's panning.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [governorate]);
-
   /* ----------------------------------------------------------------- pins */
   useEffect(() => {
     const layer = pinLayerRef.current;
@@ -476,6 +435,25 @@ export default function MapView(props: Props) {
       }
     });
   }, [pins, selectedId]);
+
+  /* --------------------------------------------------- searched place */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    foundRef.current?.remove();
+    foundRef.current = null;
+    if (!found) return;
+    foundRef.current = L.marker([found.lat, found.lng], {
+      interactive: false,
+      zIndexOffset: 500,
+      icon: L.divIcon({
+        className: 'found-wrap',
+        html: `<span class="found"><span class="found__ring"></span><span class="found__dot"></span><span class="found__label">${escapeHtml(found.name)}</span></span>`,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+      }),
+    }).addTo(map);
+  }, [found]);
 
   /* ------------------------------------------------- cursor / moving mode */
   useEffect(() => {

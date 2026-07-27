@@ -52,7 +52,6 @@ export const GOVERNORATES: Area[] = toAreas(governoratesRaw).sort((a, b) =>
 );
 export const DISTRICTS: Area[] = toAreas(districtsRaw).sort((a, b) => a.name.localeCompare(b.name));
 
-export const GOVERNORATE_NAMES: string[] = GOVERNORATES.map((g) => g.name);
 
 /** Every polygon in a geometry, as arrays of [lng, lat] rings. */
 function polygonsOf(geometry: Geometry): PolygonCoords[] {
@@ -72,7 +71,7 @@ function ringContains(ring: Ring, lng: number, lat: number): boolean {
   return inside;
 }
 
-export function areaContains(area: Area, lat: number, lng: number): boolean {
+function areaContains(area: Area, lat: number, lng: number): boolean {
   for (const poly of polygonsOf(area.geometry)) {
     const [outer, ...holes] = poly;
     if (!ringContains(outer, lng, lat)) continue;
@@ -140,9 +139,6 @@ function pointToSegment(
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
-export function inLebanon(lat: number, lng: number): boolean {
-  return areaContains(LEBANON, lat, lng);
-}
 
 /** Leaflet-ready [lat, lng] rings. */
 export function latLngRings(area: Area): [number, number][][] {

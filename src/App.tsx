@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import MapView, { type BasemapId, type MapApi } from './components/MapView';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
+import type { Found } from './lib/search';
 import PinDetail from './components/PinDetail';
 import PinEditor from './components/PinEditor';
 import Splash from './components/Splash';
@@ -25,7 +26,6 @@ export default function App() {
   // On a phone the log would cover the whole map, so it starts tucked away.
   const [collapsed, setCollapsed] = useState(() => window.innerWidth < 900);
   const [tab, setTab] = useState<PinKind>('adventure');
-  const [governorate, setGovernorate] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<PinDraft | null>(null);
   const [placing, setPlacing] = useState<PinKind | null>(null);
@@ -37,6 +37,7 @@ export default function App() {
   const [focusToken, setFocusToken] = useState(0);
   const [warningShown, setWarningShown] = useState(true);
   const [notice, setNotice] = useState('');
+  const [found, setFound] = useState<Found | null>(null);
   const [readingPhoto, setReadingPhoto] = useState(false);
   /** A photo waiting for the tap that says where it belongs. */
   const [pendingPhoto, setPendingPhoto] = useState<{ photo: Photo; date: string } | null>(null);
@@ -61,23 +62,18 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [placing, movingId]);
 
-  const onMap = useMemo(
-    () => (governorate ? pins.filter((pin) => pin.governorate === governorate) : pins),
-    [pins, governorate]
-  );
-
-  /** The log reads as a journal: earliest trip first. */
+  /** The log leads with the most recent trip. */
   const listed = useMemo(
-    () => onMap.filter((pin) => pin.kind === tab).sort(oldestFirst),
-    [onMap, tab]
+    () => pins.filter((pin) => pin.kind === tab).sort(newestFirst),
+    [pins, tab]
   );
 
   const counts = useMemo(
     () => ({
-      adventure: onMap.filter((p) => p.kind === 'adventure').length,
-      todo: onMap.filter((p) => p.kind === 'todo').length,
+      adventure: pins.filter((p) => p.kind === 'adventure').length,
+      todo: pins.filter((p) => p.kind === 'todo').length,
     }),
-    [onMap]
+    [pins]
   );
 
   const selected = selectedId ? (pins.find((p) => p.id === selectedId) ?? null) : null;
@@ -243,7 +239,7 @@ export default function App() {
 
       <main className="stage">
         <MapView
-          pins={onMap}
+          pins={pins}
           selectedId={selectedId}
           onSelect={select}
           placing={placing}
@@ -251,8 +247,6 @@ export default function App() {
           onLongPress={onLongPress}
           movingId={movingId}
           onMoveTo={onMoveTo}
-          governorate={governorate}
-          onGovernorate={(name) => setGovernorate((prev) => (prev === name ? '' : name))}
           basemap={basemap}
           showDistricts={showDistricts}
           showPlaces={showPlaces}
@@ -261,12 +255,11 @@ export default function App() {
           offsetTop={offsetTop}
           offsetBottom={offsetBottom}
           focusToken={focusToken}
+          found={found}
           onReady={setApi}
         />
 
         <Toolbar
-          governorate={governorate}
-          onGovernorate={setGovernorate}
           basemap={basemap}
           onBasemap={setBasemap}
           showDistricts={showDistricts}
@@ -275,6 +268,11 @@ export default function App() {
           onShowPlaces={setShowPlaces}
           api={api}
           onNew={startNew}
+          onFindPlace={(place) => {
+            setFound(place);
+            setSelectedId(null);
+            api?.flyToPoint(place.lat, place.lng, place.kind === 'river' ? 11 : 13.5);
+          }}
           onPhotoPin={onPhotoPin}
           readingPhoto={readingPhoto}
         />
@@ -354,9 +352,9 @@ export default function App() {
   );
 }
 
-function oldestFirst(a: Pin, b: Pin): number {
-  if (a.date && b.date && a.date !== b.date) return a.date < b.date ? -1 : 1;
+function newestFirst(a: Pin, b: Pin): number {
+  if (a.date && b.date && a.date !== b.date) return a.date < b.date ? 1 : -1;
   if (a.date && !b.date) return -1;
   if (!a.date && b.date) return 1;
-  return a.createdAt - b.createdAt;
+  return b.createdAt - a.createdAt;
 }

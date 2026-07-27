@@ -1,11 +1,11 @@
+import { useState } from 'react';
 import type { BasemapId, MapApi } from './MapView';
 import type { PinKind } from '../types';
-import { GOVERNORATE_NAMES } from '../lib/geo';
 import Cedar from './Cedar';
+import PlaceSearch from './PlaceSearch';
+import type { Found } from '../lib/search';
 
 interface Props {
-  governorate: string;
-  onGovernorate: (name: string) => void;
   basemap: BasemapId;
   onBasemap: (id: BasemapId) => void;
   showDistricts: boolean;
@@ -17,6 +17,7 @@ interface Props {
   /** Drop a pin wherever a chosen photo says it was taken. */
   onPhotoPin: (file: File) => void;
   readingPhoto: boolean;
+  onFindPlace: (place: Found) => void;
 }
 
 const BASEMAPS: { id: BasemapId; label: string }[] = [
@@ -27,8 +28,6 @@ const BASEMAPS: { id: BasemapId; label: string }[] = [
 
 export default function Toolbar(props: Props) {
   const {
-    governorate,
-    onGovernorate,
     basemap,
     onBasemap,
     showDistricts,
@@ -39,7 +38,10 @@ export default function Toolbar(props: Props) {
     onNew,
     onPhotoPin,
     readingPhoto,
+    onFindPlace,
   } = props;
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <>
@@ -51,6 +53,8 @@ export default function Toolbar(props: Props) {
               Lebanon <em>Adventure</em>
             </span>
           </div>
+
+          <PlaceSearch onPick={onFindPlace} />
 
           <div className="topbar__right">
             <button
@@ -78,7 +82,14 @@ export default function Toolbar(props: Props) {
                   strokeLinejoin="round"
                   d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.2-2h8.2l1.2 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5v-9Z"
                 />
-                <circle cx="12" cy="13" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.7" />
+                <circle
+                  cx="12"
+                  cy="13"
+                  r="3.4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                />
               </svg>
               {readingPhoto ? 'Reading…' : 'From photo'}
               <input
@@ -95,64 +106,74 @@ export default function Toolbar(props: Props) {
             </label>
           </div>
         </div>
-
-        <div className="chips" role="group" aria-label="Filter by governorate">
-          <button
-            type="button"
-            className={`chip${governorate === '' ? ' is-on' : ''}`}
-            onClick={() => onGovernorate('')}
-          >
-            All Lebanon
-          </button>
-          {GOVERNORATE_NAMES.map((name) => (
-            <button
-              key={name}
-              type="button"
-              className={`chip${governorate === name ? ' is-on' : ''}`}
-              onClick={() => onGovernorate(governorate === name ? '' : name)}
-            >
-              {name}
-            </button>
-          ))}
-        </div>
       </div>
 
-      <div className="mapctl">
-        <div className="mapctl__group">
-          {BASEMAPS.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              className={`mapctl__tab${basemap === b.id ? ' is-on' : ''}`}
-              onClick={() => onBasemap(b.id)}
-            >
-              {b.label}
-            </button>
-          ))}
-        </div>
+      <div className={`mapctl${settingsOpen ? ' is-open' : ''}`}>
+        {settingsOpen && (
+          <div className="mapctl__panel">
+            <div className="mapctl__group">
+              {BASEMAPS.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  className={`mapctl__tab${basemap === b.id ? ' is-on' : ''}`}
+                  onClick={() => onBasemap(b.id)}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
 
-        <div className="mapctl__group mapctl__group--stack">
-          <label className="switch">
-            <input
-              type="checkbox"
-              checked={showPlaces}
-              onChange={(e) => onShowPlaces(e.target.checked)}
-            />
-            <span />
-            Cities &amp; rivers
-          </label>
-          <label className="switch">
-            <input
-              type="checkbox"
-              checked={showDistricts}
-              onChange={(e) => onShowDistricts(e.target.checked)}
-            />
-            <span />
-            Districts
-          </label>
-        </div>
+            <div className="mapctl__group mapctl__group--stack">
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={showPlaces}
+                  onChange={(e) => onShowPlaces(e.target.checked)}
+                />
+                <span />
+                Cities &amp; rivers
+              </label>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={showDistricts}
+                  onChange={(e) => onShowDistricts(e.target.checked)}
+                />
+                <span />
+                Districts
+              </label>
+            </div>
+          </div>
+        )}
 
         <div className="mapctl__group mapctl__group--zoom">
+          <button
+            type="button"
+            className={`mapctl__settings${settingsOpen ? ' is-on' : ''}`}
+            onClick={() => setSettingsOpen((v) => !v)}
+            aria-expanded={settingsOpen}
+            aria-label={settingsOpen ? 'Hide map settings' : 'Map settings'}
+            title="Map settings"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinejoin="round"
+                d="m12 3 9 5-9 5-9-5 9-5Z"
+              />
+              <path
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m4 12.5 8 4.5 8-4.5"
+              />
+            </svg>
+          </button>
           <button type="button" onClick={() => api?.zoomIn()} aria-label="Zoom in" title="Zoom in">
             +
           </button>

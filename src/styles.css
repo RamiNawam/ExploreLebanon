@@ -89,21 +89,6 @@ h3 {
 .pin-list::-webkit-scrollbar,
 .sheet__body::-webkit-scrollbar,
 .detail__body::-webkit-scrollbar,
-.chips::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.pin-list::-webkit-scrollbar-thumb,
-.sheet__body::-webkit-scrollbar-thumb,
-.detail__body::-webkit-scrollbar-thumb,
-.chips::-webkit-scrollbar-thumb {
-  background: rgba(201, 162, 75, 0.4);
-  border-radius: 99px;
-}
-.pin-list::-webkit-scrollbar-track,
-.chips::-webkit-scrollbar-track {
-  background: transparent;
-}
 
 /* ============================================================
    Splash
@@ -1029,8 +1014,7 @@ h3 {
   gap: 14px;
 }
 
-.topbar__row > *,
-.topbar .chips > * {
+.topbar__row > * {
   pointer-events: auto;
 }
 
@@ -1059,45 +1043,228 @@ h3 {
   color: var(--gold-soft);
 }
 
-.chips {
-  display: flex;
-  gap: 6px;
-  flex: 1;
+/* Place search ----------------------------------------------- */
+
+.psearch {
+  position: relative;
+  flex: 1 1 auto;
   min-width: 0;
-  overflow-x: auto;
-  padding: 2px;
-  scrollbar-width: thin;
+  max-width: 360px;
 }
 
-.chip {
-  flex: 0 0 auto;
-  padding: 6px 13px;
+.psearch__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  height: 38px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  background: rgba(10, 22, 16, 0.55);
+  background: rgba(10, 22, 16, 0.72);
   backdrop-filter: blur(8px);
-  color: rgba(248, 241, 227, 0.8);
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
   transition:
-    background 0.2s ease,
-    color 0.2s ease,
     border-color 0.2s ease,
-    transform 0.2s ease;
+    background 0.2s ease;
 }
 
-.chip:hover {
-  color: #fff;
-  border-color: rgba(201, 162, 75, 0.6);
-  transform: translateY(-1px);
+.psearch__field:focus-within {
+  border-color: rgba(201, 162, 75, 0.75);
+  background: rgba(10, 22, 16, 0.9);
 }
 
-.chip.is-on {
-  background: linear-gradient(160deg, var(--gold), #a8813a);
-  border-color: var(--gold-soft);
-  color: #21170a;
+.psearch__field > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--gold-soft);
+}
+
+.psearch__field input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: var(--paper);
+  font-size: 13px;
+  font-family: var(--sans);
+}
+
+.psearch__field input::placeholder {
+  color: rgba(248, 241, 227, 0.42);
+}
+
+.psearch__field input:focus {
+  outline: none;
+}
+
+.psearch__field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.psearch__clear {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: rgba(248, 241, 227, 0.55);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.psearch__clear:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--paper);
+}
+
+.psearch__spinner {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border: 2px solid rgba(201, 162, 75, 0.25);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.psearch__list {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  right: 0;
+  max-height: 54vh;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid rgba(201, 162, 75, 0.28);
+  border-radius: 16px;
+  background: rgba(13, 27, 20, 0.97);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-lg);
+  list-style: none;
+  animation: hit-in 0.16s ease;
+}
+
+@keyframes hit-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+
+.psearch__hit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 11px;
+  text-align: left;
+  color: var(--paper);
+}
+
+.psearch__hit svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: var(--gold-soft);
+}
+
+.psearch__hit span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.psearch__hit strong {
+  font-size: 13.5px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.psearch__hit em {
+  font-style: normal;
+  font-size: 11px;
+  color: rgba(248, 241, 227, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.psearch__hit.is-active {
+  background: rgba(201, 162, 75, 0.18);
+}
+
+.psearch__empty,
+.psearch__credit {
+  padding: 10px;
+  font-size: 11.5px;
+  color: rgba(248, 241, 227, 0.42);
+}
+
+.psearch__credit {
+  padding: 7px 10px 3px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* The place a search landed on */
+.found {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+}
+
+.found__ring {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  animation: found-pulse 1.8s ease-out infinite;
+}
+
+.found__dot {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
+}
+
+.found__label {
+  position: absolute;
+  top: 22px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(13, 27, 20, 0.92);
+  color: var(--paper);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@keyframes found-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
 }
 
 .topbar__right {
@@ -1278,6 +1445,36 @@ h3 {
 }
 .switch input:checked + span::after {
   transform: translateX(13px);
+}
+
+.mapctl__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  animation: mapctl-unfold 0.22s cubic-bezier(0.34, 1.3, 0.64, 1);
+  transform-origin: bottom right;
+}
+
+@keyframes mapctl-unfold {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mapctl__settings svg {
+  width: 17px;
+  height: 17px;
+}
+
+.mapctl__settings.is-on {
+  background: rgba(201, 162, 75, 0.9);
+  color: #21170a;
 }
 
 .mapctl__group--zoom {
@@ -2288,12 +2485,15 @@ h3 {
   color: var(--gold-soft) !important;
 }
 
+/* Leaflet gives div icons a white box by default; ours are bare HTML. */
 .pin-wrap,
 .plabel-wrap,
-.gov-label-wrap,
-.district-label-wrap {
-  background: none !important;
-  border: 0 !important;
+.district-label-wrap,
+.found-wrap {
+  background: transparent;
+  border: none;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Tile filters are cheap (the browser composites them once per tile) but
@@ -2302,54 +2502,6 @@ h3 {
   filter: saturate(0.88) contrast(1.02);
 }
 
-/* Governorate labels ----------------------------------------- */
-.gov-label {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transform: translate(-50%, -50%);
-  padding: 4px 10px;
-  border: 1px solid rgba(201, 162, 75, 0.55);
-  border-radius: 999px;
-  background: rgba(248, 241, 227, 0.9);
-  color: #23402f;
-  font-family: var(--serif);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  box-shadow: var(--shadow-sm);
-  transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.gov-label:hover {
-  background: #fff;
-  transform: translate(-50%, -50%) scale(1.06);
-}
-
-.gov-label.is-active {
-  background: linear-gradient(160deg, var(--gold), #a8813a);
-  border-color: var(--gold-soft);
-  color: #21170a;
-}
-
-/* Governorate pills are the map-side filter, so they stay until you are
-   zoomed in far enough for town names to take over. */
-.zoom-near .gov-label {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-.zoom-mid .gov-label {
-  font-size: 11px;
-  padding: 3px 8px;
-  opacity: 0.9;
-}
 
 /* District labels -------------------------------------------- */
 .district-label {
@@ -2694,22 +2846,43 @@ h3 {
     padding: 10px 10px 20px 46px;
   }
 
+  /* The three actions never fit beside the wordmark on a phone, so they get
+     their own full-width row underneath it. */
+  .topbar__row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* The wordmark is decorative; the search field needs the room more. */
+  .brand {
+    flex: 0 0 auto;
+  }
+
   .brand__text {
-    font-size: 15px;
+    display: none;
+  }
+
+  .psearch {
+    max-width: none;
+  }
+
+  .topbar__right {
+    flex: 1 0 100%;
+    justify-content: space-between;
+    margin-left: -36px;
   }
 
   .new-btn {
-    padding: 9px 13px;
+    flex: 0 1 auto;
+    justify-content: center;
+    gap: 5px;
+    padding: 9px 11px;
+    font-size: 12px;
+    min-width: 0;
   }
 
-  .chips {
-    margin: 0 -10px 0 -46px;
-    padding: 2px 10px 2px 46px;
-    scrollbar-width: none;
-  }
-
-  .chips::-webkit-scrollbar {
-    display: none;
+  .new-btn svg {
+    flex: 0 0 auto;
   }
 
   /* Roomier taps on touch screens. */
@@ -2744,10 +2917,6 @@ h3 {
     right: 8px;
     bottom: calc(12px + env(safe-area-inset-bottom));
     gap: 6px;
-  }
-
-  .mapctl__group--stack {
-    display: none;
   }
 
   .hint,

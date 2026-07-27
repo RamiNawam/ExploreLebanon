@@ -1136,6 +1136,35 @@ h3 {
   background: rgba(27, 79, 112, 0.65);
 }
 
+.new-btn--photo {
+  cursor: pointer;
+}
+
+.new-btn--photo svg {
+  width: 16px;
+  height: 16px;
+  color: var(--gold-soft);
+}
+
+.new-btn--photo:hover {
+  border-color: var(--gold);
+  background: rgba(140, 108, 40, 0.55);
+}
+
+.new-btn--photo.is-busy {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.field__note {
+  margin-left: 8px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--cedar);
+  text-transform: none;
+}
+
 .dot {
   width: 9px;
   height: 9px;
@@ -1372,6 +1401,11 @@ h3 {
 .toast--warn {
   background: linear-gradient(160deg, #8a6a22, #5c4413);
   border: 1px solid rgba(227, 196, 131, 0.35);
+}
+
+.toast--info {
+  background: linear-gradient(160deg, #1f4a35, #143024);
+  border: 1px solid rgba(201, 162, 75, 0.35);
 }
 
 .toast strong {

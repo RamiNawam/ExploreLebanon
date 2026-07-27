@@ -7,7 +7,11 @@ import PinEditor from './components/PinEditor';
 import Splash from './components/Splash';
 import { usePins } from './hooks/usePins';
 import { today } from './lib/format';
-import type { Pin, PinDraft, PinKind } from './types';
+import { readPhotoMeta } from './lib/exif';
+import { repo } from './lib/repo';
+import { describeError } from './lib/errors';
+import { inRegion } from './lib/geo';
+import type { Photo, Pin, PinDraft, PinKind } from './types';
 
 const SIDEBAR_WIDTH = 376;
 const RAIL_WIDTH = 56;
@@ -32,6 +36,10 @@ export default function App() {
   const [api, setApi] = useState<MapApi | null>(null);
   const [focusToken, setFocusToken] = useState(0);
   const [warningShown, setWarningShown] = useState(true);
+  const [notice, setNotice] = useState('');
+  const [readingPhoto, setReadingPhoto] = useState(false);
+  /** A photo waiting for the tap that says where it belongs. */
+  const [pendingPhoto, setPendingPhoto] = useState<{ photo: Photo; date: string } | null>(null);
   const [narrow, setNarrow] = useState(() => window.innerWidth < 900);
 
   useEffect(() => {
@@ -101,13 +109,61 @@ export default function App() {
     setTab(kind);
     setMovingId(null);
     setSelectedId(null);
+    setPendingPhoto(null);
     setPlacing(kind);
   };
 
   const onPlace = (lat: number, lng: number) => {
     if (!placing) return;
-    setDraft(blankDraft(placing, lat, lng));
+    const next = blankDraft(placing, lat, lng);
+    if (pendingPhoto) {
+      next.cover = pendingPhoto.photo;
+      next.date = placing === 'adventure' ? pendingPhoto.date : '';
+      setPendingPhoto(null);
+    }
+    setDraft(next);
     setPlacing(null);
+  };
+
+  /**
+   * Pick a photo, land the pin where the camera says it was taken. Phones write
+   * GPS and a timestamp into the file, so this usually needs no map work at all.
+   */
+  const onPhotoPin = async (file: File) => {
+    setReadingPhoto(true);
+    setNotice('');
+    try {
+      const [meta, photo] = await Promise.all([readPhotoMeta(file), repo.uploadPhoto(file)]);
+      const date = meta.takenOn ?? today();
+      const located = meta.lat !== undefined && meta.lng !== undefined;
+
+      if (located && inRegion(meta.lat!, meta.lng!)) {
+        setSelectedId(null);
+        setPlacing(null);
+        setPendingPhoto(null);
+        setDraft({
+          ...blankDraft(tab, meta.lat!, meta.lng!),
+          date: tab === 'adventure' ? date : '',
+          cover: photo,
+        });
+        return;
+      }
+
+      // No usable fix — keep the photo and let them point at the spot.
+      setPendingPhoto({ photo, date });
+      setSelectedId(null);
+      setPlacing(tab);
+      setNotice(
+        located
+          ? 'That photo was taken outside Lebanon — tap the map to place the pin.'
+          : 'That photo has no location saved. Tap the map to place the pin.'
+      );
+    } catch (err) {
+      console.error(err);
+      setNotice(describeError(err, 'That photo could not be read.'));
+    } finally {
+      setReadingPhoto(false);
+    }
   };
 
   /** Long-press or right-click: skip the two-step flow and open the form. */
@@ -219,6 +275,8 @@ export default function App() {
           onShowPlaces={setShowPlaces}
           api={api}
           onNew={startNew}
+          onPhotoPin={onPhotoPin}
+          readingPhoto={readingPhoto}
         />
 
         {(placing || movingId) && (
@@ -226,14 +284,17 @@ export default function App() {
             <span className={`dot dot--${placing ?? 'move'}`} />
             {movingId
               ? 'Click the map to move this pin.'
-              : placing === 'adventure'
-                ? 'Click the map where the adventure happened.'
-                : 'Click the map where you want to go.'}
+              : pendingPhoto
+                ? 'Click the map to place your photo.'
+                : placing === 'adventure'
+                  ? 'Click the map where the adventure happened.'
+                  : 'Click the map where you want to go.'}
             <button
               type="button"
               onClick={() => {
                 setPlacing(null);
                 setMovingId(null);
+                setPendingPhoto(null);
               }}
             >
               Cancel
@@ -252,7 +313,16 @@ export default function App() {
           </div>
         )}
 
-        {!error && setupWarning && warningShown && (
+        {notice && (
+          <div className="toast toast--info" role="status">
+            <span>{notice}</span>
+            <button type="button" onClick={() => setNotice('')} aria-label="Dismiss">
+              ×
+            </button>
+          </div>
+        )}
+
+        {!error && !notice && setupWarning && warningShown && (
           <div className="toast toast--warn" role="alert">
             <span>
               <strong>Pins are only saving on this device.</strong> {setupWarning}

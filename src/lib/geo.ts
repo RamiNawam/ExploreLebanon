@@ -217,3 +217,9 @@ export const REGION_BOUNDS: [[number, number], [number, number]] = [
   [LEBANON_BOUNDS[0][0] - 0.55, LEBANON_BOUNDS[0][1] - 0.85],
   [LEBANON_BOUNDS[1][0] + 0.55, LEBANON_BOUNDS[1][1] + 0.85],
 ];
+
+/** Is this somewhere the map can actually show? */
+export function inRegion(lat: number, lng: number): boolean {
+  const [[s, w], [n, e]] = REGION_BOUNDS;
+  return lat >= s && lat <= n && lng >= w && lng <= e;
+}

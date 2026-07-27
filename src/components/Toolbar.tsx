@@ -14,6 +14,9 @@ interface Props {
   onShowPlaces: (value: boolean) => void;
   api: MapApi | null;
   onNew: (kind: PinKind) => void;
+  /** Drop a pin wherever a chosen photo says it was taken. */
+  onPhotoPin: (file: File) => void;
+  readingPhoto: boolean;
 }
 
 const BASEMAPS: { id: BasemapId; label: string }[] = [
@@ -34,6 +37,8 @@ export default function Toolbar(props: Props) {
     onShowPlaces,
     api,
     onNew,
+    onPhotoPin,
+    readingPhoto,
   } = props;
 
   return (
@@ -60,6 +65,34 @@ export default function Toolbar(props: Props) {
               <span className="dot dot--todo" />
               To-do
             </button>
+            <label
+              className={`new-btn new-btn--photo${readingPhoto ? ' is-busy' : ''}`}
+              title="Pick a photo and drop the pin where it was taken"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.2-2h8.2l1.2 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5v-9Z"
+                />
+                <circle cx="12" cy="13" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.7" />
+              </svg>
+              {readingPhoto ? 'Reading…' : 'From photo'}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                disabled={readingPhoto}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = ''; // let the same photo be picked twice
+                  if (file) onPhotoPin(file);
+                }}
+              />
+            </label>
           </div>
         </div>
 

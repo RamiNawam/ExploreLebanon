@@ -190,8 +190,9 @@ export default function MapView(props: Props) {
       govLayerRef.current.set(area.name, poly);
     });
 
-    // Lebanon itself: a warm wash to lift it off its neighbours, then a dark
-    // casing line under a gold border so the frontier reads unmistakably.
+    // Lebanon itself: a warm wash lifts it off its neighbours, and the frontier
+    // is a single hairline. Anything heavier sits on top of the town names the
+    // basemap draws along the border.
     const rings = latLngRings(LEBANON);
     L.polygon(rings, {
       renderer,
@@ -203,17 +204,9 @@ export default function MapView(props: Props) {
     L.polyline(rings, {
       renderer,
       interactive: false,
-      color: '#14261c',
-      weight: 6,
-      opacity: 0.35,
-      lineJoin: 'round',
-    }).addTo(map);
-    L.polyline(rings, {
-      renderer,
-      interactive: false,
-      color: '#c9a24b',
-      weight: 2.6,
-      opacity: 1,
+      color: '#b98f38',
+      weight: 1.4,
+      opacity: 0.85,
       lineJoin: 'round',
     }).addTo(map);
 

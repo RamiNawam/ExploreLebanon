@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Photo, PinDraft, PinKind } from '../types';
 import { imageFilesFrom } from '../lib/images';
+import { readPhotoMeta } from '../lib/exif';
 import { describeError } from '../lib/errors';
 import { repo } from '../lib/repo';
 import { governorateAt } from '../lib/geo';
@@ -36,11 +37,13 @@ export default function PinEditor({ draft, onSave, onCancel }: Props) {
   const [form, setForm] = useState<PinDraft>(draft);
   const [busy, setBusy] = useState(0);
   const [error, setError] = useState('');
+  const [dateFromPhoto, setDateFromPhoto] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setForm(draft);
     setError('');
+    setDateFromPhoto(false);
   }, [draft]);
 
   useEffect(() => {
@@ -76,8 +79,22 @@ export default function PinEditor({ draft, onSave, onCancel }: Props) {
     }
   };
 
-  const takeCover = (files: File[]) =>
-    upload(files.slice(0, 1), (photo) => patch('cover', photo));
+  /**
+   * The main picture also carries the day it was taken, which is almost always
+   * the date the user is about to type. Only fill it while the field is still
+   * untouched, so an edited date is never overwritten.
+   */
+  const takeCover = async (files: File[]) => {
+    const [file] = files;
+    if (!file) return;
+    const metaPromise = readPhotoMeta(file);
+    await upload([file], (photo) => patch('cover', photo));
+    const meta = await metaPromise;
+    if (meta.takenOn && form.kind === 'adventure' && form.date === draft.date) {
+      patch('date', meta.takenOn);
+      setDateFromPhoto(true);
+    }
+  };
 
   const addPhotos = (files: File[]) =>
     upload(files, (photo) => setForm((prev) => ({ ...prev, photos: [...prev.photos, photo] })));
@@ -158,11 +175,17 @@ export default function PinEditor({ draft, onSave, onCancel }: Props) {
 
           {form.kind === 'adventure' && (
             <label className="field">
-              <span>Date</span>
+              <span>
+                Date
+                {dateFromPhoto && <em className="field__note">from the photo</em>}
+              </span>
               <input
                 type="date"
                 value={form.date}
-                onChange={(e) => patch('date', e.target.value)}
+                onChange={(e) => {
+                  setDateFromPhoto(false);
+                  patch('date', e.target.value);
+                }}
               />
             </label>
           )}

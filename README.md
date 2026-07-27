@@ -5,8 +5,10 @@ Frontend-only React + TypeScript (Vite + Leaflet), with Supabase for shared stor
 
 - **Red pins** — adventures: name, date, main picture, extra pictures, description.
 - **Blue pins** — the to-do list: name, description, picture. Tick them off once visited.
-- Collapsible **Adventure Log** side tab, filterable by governorate, date range and free text.
-- Only Lebanon is drawn — everything beyond the border is painted out.
+- Collapsible **Adventure Log** side tab listing every pin, oldest first.
+- Three ways to drop a pin: the toolbar buttons, a **press-and-hold** anywhere on the map,
+  or **From photo** — pick a picture and the pin lands where the camera says it was taken,
+  with the date filled in from the same EXIF metadata.
 - Clicking a pin flies the map to it and opens its card.
 - Works on phones: the picture buttons open the camera roll directly; laptops can also
   drag-and-drop files.

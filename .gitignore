@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.DS_Store
+
+# Local secrets — the real values live in Netlify's env vars
+.env
+.env.local
+.env.*.local
+
+*.log
+*.tsbuildinfo
+.vite/
+.netlify/

@@ -27,13 +27,16 @@ Without Supabase credentials the app still works — pins are saved in your own 
 2. Open **SQL Editor**, paste [`supabase/schema.sql`](supabase/schema.sql) and run it. That
    creates the `pins` table, its access policies, the public `pin-photos` bucket and turns
    on realtime.
-3. In **Project Settings → API**, copy the project URL and the anon/publishable key.
+3. In **Settings → Data API**, copy the **Project URL**. In **Settings → API Keys**, copy the
+   **Publishable key** (`sb_publishable_...`) — that is the current name for what used to be
+   the `anon` key, which still lives on the *Legacy API keys* tab if you prefer it. Never use
+   a `sb_secret_` / `service_role` key here: this is a browser build.
 4. Put them in `.env.local` (see [`.env.example`](.env.example)) for local dev, and in
    Netlify under **Site configuration → Environment variables**:
 
    ```
    VITE_SUPABASE_URL=https://xxxx.supabase.co
-   VITE_SUPABASE_ANON_KEY=eyJ...
+   VITE_SUPABASE_ANON_KEY=sb_publishable_...
    ```
 
 > **Heads-up on access:** the map is deliberately open — no sign-in. Anyone with the URL

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Pin, PinKind } from '../types';
 import { formatDate } from '../lib/format';
 import Cedar from './Cedar';
+import type { Account } from '../lib/auth';
 
 interface Props {
   collapsed: boolean;
@@ -18,6 +19,10 @@ interface Props {
   onToggleDone: (pin: Pin) => void;
   /** False when the app is running on device-only storage. */
   shared: boolean;
+  /** Null in device-only mode, where there is nothing to sign in to. */
+  account: Account | null;
+  onDevices: () => void;
+  onSignOut: () => Promise<void>;
 }
 
 export default function Sidebar(props: Props) {
@@ -35,6 +40,9 @@ export default function Sidebar(props: Props) {
     onDelete,
     onToggleDone,
     shared,
+    account,
+    onDevices,
+    onSignOut,
   } = props;
 
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -240,13 +248,31 @@ export default function Sidebar(props: Props) {
             ))}
           </div>
 
+          {account && (
+            <div className="account">
+              <button type="button" className="account__who" onClick={onDevices}>
+                <span className="account__avatar">{account.username.slice(0, 1).toUpperCase()}</span>
+                <span className="account__text">
+                  <strong>{account.username}</strong>
+                  <em>Devices</em>
+                </span>
+              </button>
+              <button type="button" className="account__out" onClick={() => void onSignOut()}>
+                Sign out
+              </button>
+            </div>
+          )}
+
           <footer className="sidebar__foot">
             <span>{pins.length} shown</span>
-            <span className={`sync${shared ? ' is-live' : ''}`} title={
-              shared
-                ? 'Pins are saved to the shared map and update live for everyone.'
-                : 'No shared database configured — these pins stay in this browser.'
-            }>
+            <span
+              className={`sync${shared ? ' is-live' : ''}`}
+              title={
+                shared
+                  ? 'Pins are saved to the shared map and update live for everyone.'
+                  : 'No shared database configured — these pins stay in this browser.'
+              }
+            >
               <i />
               {shared ? 'Shared live' : 'This device only'}
             </span>

@@ -6,6 +6,9 @@ import type { Found } from './lib/search';
 import PinDetail from './components/PinDetail';
 import PinEditor from './components/PinEditor';
 import Splash from './components/Splash';
+import SignIn from './components/SignIn';
+import Devices from './components/Devices';
+import { useAuth } from './hooks/useAuth';
 import { usePins } from './hooks/usePins';
 import { today } from './lib/format';
 import { readPhotoMeta } from './lib/exif';
@@ -19,8 +22,10 @@ const RAIL_WIDTH = 56;
 const DETAIL_WIDTH = 400;
 
 export default function App() {
+  const auth = useAuth();
+  const signedIn = auth.open || !!auth.account;
   const { pins, ready, mode, setupWarning, error, clearError, save, remove, move, toggleDone } =
-    usePins();
+    usePins(signedIn);
 
   const [entered, setEntered] = useState(false);
   // On a phone the log would cover the whole map, so it starts tucked away.
@@ -38,6 +43,7 @@ export default function App() {
   const [warningShown, setWarningShown] = useState(true);
   const [notice, setNotice] = useState('');
   const [found, setFound] = useState<Found | null>(null);
+  const [showDevices, setShowDevices] = useState(false);
   const [readingPhoto, setReadingPhoto] = useState(false);
   /** A photo waiting for the tap that says where it belongs. */
   const [pendingPhoto, setPendingPhoto] = useState<{ photo: Photo; date: string } | null>(null);
@@ -216,6 +222,16 @@ export default function App() {
     return <Splash onExplore={() => setEntered(true)} />;
   }
 
+  // Wait for the stored session before deciding — otherwise a returning device
+  // would be shown the sign-in form for a moment on every load.
+  if (!auth.ready) {
+    return <div className="gate gate--waiting" />;
+  }
+
+  if (!signedIn) {
+    return <SignIn />;
+  }
+
   return (
     <div
       className={`app${collapsed ? ' is-collapsed' : ''}${selected ? ' has-detail' : ''}`}
@@ -235,6 +251,9 @@ export default function App() {
         onDelete={onDelete}
         onToggleDone={(pin) => toggleDone(pin.id)}
         shared={mode === 'cloud'}
+        account={auth.account}
+        onDevices={() => setShowDevices(true)}
+        onSignOut={auth.signOut}
       />
 
       <main className="stage">
@@ -348,6 +367,8 @@ export default function App() {
       </main>
 
       {draft && <PinEditor draft={draft} onSave={onSave} onCancel={() => setDraft(null)} />}
+
+      {showDevices && <Devices onClose={() => setShowDevices(false)} />}
     </div>
   );
 }

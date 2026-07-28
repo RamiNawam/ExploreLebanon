@@ -19,7 +19,7 @@ export interface PinsApi {
   toggleDone: (id: string) => Promise<void>;
 }
 
-export function usePins(): PinsApi {
+export function usePins(enabled: boolean): PinsApi {
   const [pins, setPins] = useState<Pin[]>([]);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
@@ -28,6 +28,7 @@ export function usePins(): PinsApi {
   latest.current = pins;
 
   const reload = useCallback(async () => {
+    if (!enabled) return;
     try {
       const all = await repo.list();
       setPins(all.sort(byRecency));
@@ -38,13 +39,14 @@ export function usePins(): PinsApi {
     } finally {
       setReady(true);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     void reload();
     // Someone else adding a pin shows up here without a refresh.
     return repo.watch(() => void reload());
-  }, [reload]);
+  }, [enabled, reload]);
 
   const commit = useCallback(async (pin: Pin) => {
     setPins((prev) => {

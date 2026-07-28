@@ -41,10 +41,33 @@ Without Supabase credentials the app still works — pins are saved in your own 
    VITE_SUPABASE_ANON_KEY=sb_publishable_...
    ```
 
-> **Heads-up on access:** the map is deliberately open — no sign-in. Anyone with the URL
-> can add, edit and delete pins, so share the link only with people you trust. If you ever
-> want a passcode or per-person accounts instead, the policies in `schema.sql` are the
-> place to change it.
+## Accounts
+
+The map is private: reading and writing pins both require a signed-in account, enforced by
+Postgres row-level security rather than by the app, so the rule holds even if someone calls
+the API directly with the publishable key.
+
+There is no public sign-up — you create the accounts yourself:
+
+1. In Supabase, go to **Authentication → Users → Add user → Create new user**.
+2. **Email:** the username, lowercased, at `@lebanon-adventure.app`. The domain is never
+   contacted; it exists only because Supabase Auth identifies people by address.
+   `RamiNawam` → `raminawam@lebanon-adventure.app`.
+3. **Password:** type it straight into the dashboard. Supabase hashes it (bcrypt); it is
+   never stored in this repository or reachable from the browser bundle.
+4. Tick **Auto Confirm User**, so the account works without an email round-trip.
+5. Repeat for the second account.
+
+Sign in with the plain username (`RamiNawam`), not the address — the app adds the domain.
+
+**Staying signed in.** A successful sign-in stores a session that refreshes itself, so a
+device is asked for the password once and not again. Each browser also registers itself in
+the `devices` table; the account row at the bottom of the Adventure Log lists them and can
+remove one, which signs that browser out the next time it reloads.
+
+> **If you ever want to add a third person,** create the user the same way. To lock things
+> down further — say, each person only editing their own pins — the policies in
+> `supabase/schema.sql` are the place to change it.
 
 ## Deploy (Netlify)
 

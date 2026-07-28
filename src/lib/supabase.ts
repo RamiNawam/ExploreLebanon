@@ -65,7 +65,14 @@ export function getSupabase(): SupabaseClient {
   if (!client) {
     if (!isCloudConfigured()) throw new Error('Supabase is not configured');
     client = createClient(SUPABASE_URL, RAW_KEY, {
-      auth: { persistSession: false },
+      auth: {
+        // The whole point of "sign in once per device": the session is kept
+        // and silently refreshed, so the password is never asked for again.
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+        storageKey: 'lebanon-adventure.session',
+      },
       realtime: { params: { eventsPerSecond: 4 } },
     });
   }

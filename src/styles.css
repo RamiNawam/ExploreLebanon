@@ -683,39 +683,31 @@ h3 {
   color: rgba(227, 196, 131, 0.75);
 }
 
-.filters__panel select,
-.filters__panel input {
+.field > input,
+.field > select {
   width: 100%;
-  padding: 8px 10px;
+  padding: 11px 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 9px;
+  border-radius: 11px;
   background: rgba(0, 0, 0, 0.35);
   color: var(--paper);
-  font-size: 12.5px;
+  font-family: var(--sans);
+  font-size: 14px;
   outline: none;
+  transition: border-color 0.2s ease;
 }
 
-.filters__panel select:focus,
-.filters__panel input:focus {
+.field > input::placeholder {
+  color: rgba(248, 241, 227, 0.32);
+}
+
+.field > input:focus,
+.field > select:focus {
   border-color: rgba(201, 162, 75, 0.7);
 }
 
-.filters__panel input[type='date'] {
+.field > input[type='date'] {
   color-scheme: dark;
-}
-
-.filters__clear {
-  justify-self: start;
-  padding: 5px 10px;
-  border: 0;
-  border-radius: 8px;
-  background: rgba(201, 162, 75, 0.16);
-  color: var(--gold-soft);
-  font-size: 11.5px;
-  font-weight: 600;
-}
-.filters__clear:hover {
-  background: rgba(201, 162, 75, 0.28);
 }
 
 /* Pin cards -------------------------------------------------- */
@@ -2943,4 +2935,284 @@ h3 {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ============================================================
+   Sign-in gate
+   ============================================================ */
+
+.gate {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--ink);
+  overflow: hidden;
+}
+
+.gate--waiting {
+  background: var(--ink);
+}
+
+.gate__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 32%;
+  filter: saturate(0.85);
+}
+
+.gate__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(8, 18, 13, 0.25) 0%, rgba(8, 18, 13, 0.86) 72%),
+    linear-gradient(to top, rgba(8, 18, 13, 0.9), rgba(8, 18, 13, 0.45));
+}
+
+.gate__card {
+  position: relative;
+  z-index: 1;
+  width: min(400px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 32px 28px 26px;
+  border: 1px solid rgba(201, 162, 75, 0.28);
+  border-radius: 22px;
+  background: rgba(13, 27, 20, 0.9);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-lg);
+  animation: gate-in 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes gate-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+.gate__cedar {
+  width: 34px;
+  height: 34px;
+  color: var(--gold);
+  align-self: center;
+}
+
+.gate__card h1 {
+  margin: 0;
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--paper);
+}
+
+.gate__lede {
+  margin: -6px 0 6px;
+  text-align: center;
+  font-size: 12.5px;
+  color: rgba(248, 241, 227, 0.5);
+}
+
+.gate__error {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 11px;
+  background: rgba(184, 36, 43, 0.18);
+  border: 1px solid rgba(184, 36, 43, 0.45);
+  color: #ffc9cb;
+  font-size: 12.5px;
+}
+
+.gate__cta {
+  margin-top: 4px;
+  padding: 13px;
+  border-radius: 999px;
+  background: linear-gradient(160deg, var(--gold), #a8813a);
+  color: #21170a;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+.gate__cta:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.07);
+}
+
+.gate__cta:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.gate__device {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: rgba(248, 241, 227, 0.42);
+}
+
+.gate__device svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.gate__device strong {
+  color: rgba(248, 241, 227, 0.7);
+  font-weight: 600;
+}
+
+/* Account row in the log ------------------------------------- */
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 0 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.account__who {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  padding: 5px 7px;
+  border-radius: 11px;
+  text-align: left;
+  transition: background 0.2s ease;
+}
+
+.account__who:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.account__avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: linear-gradient(160deg, var(--gold), #8a6a22);
+  color: #21170a;
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.account__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.account__text strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--paper);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account__text em {
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(248, 241, 227, 0.38);
+}
+
+.account__out {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: rgba(248, 241, 227, 0.72);
+  font-size: 11.5px;
+  font-weight: 600;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.account__out:hover {
+  border-color: rgba(184, 36, 43, 0.6);
+  color: #ffc9cb;
+}
+
+/* Devices sheet ---------------------------------------------- */
+
+.sheet--devices {
+  max-width: 460px;
+}
+
+.devrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.devrow + .devrow {
+  margin-top: 8px;
+}
+
+.devrow.is-current {
+  border-color: rgba(201, 162, 75, 0.4);
+  background: rgba(201, 162, 75, 0.08);
+}
+
+.devrow strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--paper);
+}
+
+.devrow__here {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(201, 162, 75, 0.85);
+  color: #21170a;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.devrow em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 11.5px;
+  color: rgba(248, 241, 227, 0.45);
+}
+
+.devices__empty,
+.devices__note {
+  margin: 14px 2px 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: rgba(248, 241, 227, 0.42);
 }

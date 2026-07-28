@@ -687,27 +687,29 @@ h3 {
 .field > select {
   width: 100%;
   padding: 11px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 11px;
-  background: rgba(0, 0, 0, 0.35);
-  color: var(--paper);
   font-family: var(--sans);
   font-size: 14px;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.field > input::placeholder {
+/* Dark surface (the sign-in card). */
+.gate .field > input {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--paper);
+  color-scheme: dark;
+}
+
+.gate .field > input::placeholder {
   color: rgba(248, 241, 227, 0.32);
 }
 
-.field > input:focus,
-.field > select:focus {
+.gate .field > input:focus {
   border-color: rgba(201, 162, 75, 0.7);
-}
-
-.field > input[type='date'] {
-  color-scheme: dark;
 }
 
 /* Pin cards -------------------------------------------------- */
@@ -2193,6 +2195,8 @@ h3 {
   border: 1px solid var(--paper-3);
   border-radius: 10px;
   background: #fff;
+  color: var(--ink);
+  color-scheme: light;
   font-size: 14px;
   outline: none;
   transition:
@@ -2203,7 +2207,12 @@ h3 {
 .sheet__body textarea {
   resize: vertical;
   line-height: 1.6;
-  font-family: inherit;
+  font-family: var(--sans);
+}
+
+.sheet__body input::placeholder,
+.sheet__body textarea::placeholder {
+  color: rgba(14, 28, 21, 0.38);
 }
 
 .sheet__body input:focus,
